@@ -68,12 +68,13 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
-    # No profile restriction - always enabled
+    # Removed resource limits to prevent connection issues
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # NVIDIA GPU-specific Ollama service
   ollama-gpu-nvidia:
@@ -124,10 +125,12 @@ services:
       - "${OPENWEBUI_PORT:-3000}:8080"
     environment:
       - OLLAMA_API_BASE_URL=http://ollama:11434
+      - OLLAMA_ORIGINS=*
     volumes:
       - openwebui_data:/app/backend/data
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -141,11 +144,7 @@ services:
     environment:
       - QDRANT_ALLOW_RECOVERY=true
       - QDRANT_STORAGE_OPTIMIZERS_DEFAULT_SEGMENT_NUMBER=2
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
+    # Removed resource limits to prevent connection issues
 
   ngrok:
     image: ngrok/ngrok:latest

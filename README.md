@@ -96,6 +96,46 @@ After installation, you can access:
 - **ngrok dashboard**: http://YOUR_SERVER_IP:4040
 - **ngrok tunnel URLs**: Visit the ngrok dashboard to find your HTTPS URLs
 
+### Firewall Configuration for Linux Servers
+
+For Linux installations, the install script now automatically configures the UFW firewall for enhanced security. The following ports are opened:
+
+- Port 22 (SSH) - For remote server access
+- Port 80 (HTTP) - For web traffic
+- Port 443 (HTTPS) - For secure web traffic
+- Port 3000 - For Open WebUI
+- Port 5678 - For n8n workflow automation
+- Port 11434 - For Ollama API
+- Port 6333 - For Qdrant vector database
+- Port 4040 - For ngrok dashboard
+
+Optional ports (commented out by default):
+- Port 8080 - For SearXNG
+- Port 8501 - For Archon Streamlit UI
+- Port 5001 - For DocLing Serve
+
+To manually configure or modify the firewall settings:
+```bash
+sudo ufw status                # Check current firewall status
+sudo ufw allow <port>/tcp      # Open a specific port
+sudo ufw deny <port>/tcp       # Close a specific port
+sudo ufw reload                # Apply changes
+```
+
+You can also use the included standalone firewall configuration script:
+```bash
+# First make it executable
+chmod +x setup-firewall.sh
+# Then run it with sudo
+sudo ./setup-firewall.sh
+```
+
+This script will:
+- Install UFW if not already present
+- Configure all necessary ports for the AI Development Stack
+- Reset existing rules and enable the firewall
+- Display the current firewall status
+
 ## Setting Up ngrok
 
 This stack uses ngrok to make your local services accessible from the internet, which is perfect for:

@@ -35,6 +35,46 @@ else
     echo "Installing Docker Compose..."
     apt-get install -y docker-compose
   fi
+  
+  # Setup UFW Firewall (Linux only)
+  echo "Setting up UFW firewall..."
+  # Check if UFW is installed, install if not
+  if ! command -v ufw &> /dev/null; then
+    echo "Installing UFW..."
+    apt-get install -y ufw
+  fi
+  
+  echo "Configuring UFW rules..."
+  # Basic UFW configuration
+  ufw default deny incoming
+  ufw default allow outgoing
+  
+  # Allow essential services
+  ufw allow ssh
+  ufw allow 80/tcp
+  ufw allow 443/tcp
+  
+  # AI Stack specific ports
+  ufw allow 3000/tcp  # Open WebUI
+  ufw allow 5678/tcp  # n8n workflow
+  ufw allow 11434/tcp # Ollama API
+  ufw allow 6333/tcp  # Qdrant
+  ufw allow 4040/tcp  # ngrok dashboard
+  
+  # Optional services - uncomment if needed
+  # ufw allow 8080/tcp # SearXNG
+  # ufw allow 8501/tcp # Archon Streamlit UI
+  # ufw allow 5001/tcp # DocLing Serve
+  
+  # Enable UFW if not already enabled
+  if ! ufw status | grep -q "Status: active"; then
+    echo "y" | ufw enable
+  fi
+  
+  # Reload UFW to apply changes
+  ufw reload
+  
+  echo "UFW firewall configured successfully."
 fi
 
 # Create installation directory
