@@ -62,7 +62,7 @@ sudo ./install.sh
 
 ### GPU Support (Optional)
 
-If you have an NVIDIA or AMD GPU and want to use it for Ollama:
+The stack uses CPU by default for Ollama, but if you have a compatible GPU, you can enable it:
 
 **NVIDIA GPU**:
 ```bash
@@ -73,6 +73,8 @@ docker compose --profile gpu-nvidia up -d
 ```bash
 docker compose --profile gpu-amd up -d
 ```
+
+Note: When using GPU profiles, the default CPU-based Ollama service remains enabled to ensure compatibility with all dependent services. This prevents dependency conflicts.
 
 ## Accessing Your Services
 
@@ -131,6 +133,11 @@ If you encounter issues:
 3. Check system resources: `htop` or `docker stats`
 4. Verify ngrok is running correctly in the dashboard
 5. On Windows, make sure Docker Desktop is running and WSL2 is properly configured
+
+### Common Issues
+
+- **"Service was pulled in as a dependency but is not enabled by the active profiles"**: This error has been fixed in the latest version. The default Ollama service is now always enabled regardless of profile.
+- **Cannot access Ollama when using GPU**: Make sure you have the proper GPU drivers installed and Docker has access to your GPU.
 
 ## Updating
 

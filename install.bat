@@ -99,6 +99,7 @@ echo       interval: 5s
 echo       timeout: 5s
 echo       retries: 10
 echo.
+echo   # Main Ollama service - CPU version
 echo   ollama:
 echo     image: ollama/ollama:latest
 echo     restart: always
@@ -116,8 +117,9 @@ echo       resources:
 echo         limits:
 echo           cpus: '2'
 echo           memory: 4G
-echo     profiles: ["default", "cpu"]
+echo     # No profile restriction - always enabled
 echo.
+echo   # NVIDIA GPU-specific Ollama service
 echo   ollama-gpu-nvidia:
 echo     image: ollama/ollama:latest
 echo     restart: always
@@ -137,7 +139,7 @@ echo           devices:
 echo             - driver: nvidia
 echo               count: 1
 echo               capabilities: [gpu]
-echo     profiles: ["gpu-nvidia"]
+echo     profiles: ["gpu-nvidia"] # Only enabled when gpu-nvidia profile is activated
 echo.
 echo   openwebui:
 echo     image: ghcr.io/open-webui/open-webui:main

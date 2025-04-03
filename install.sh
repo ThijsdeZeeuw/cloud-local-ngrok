@@ -113,6 +113,7 @@ services:
       timeout: 5s
       retries: 10
 
+  # Main Ollama service - CPU version
   ollama:
     image: ollama/ollama:latest
     restart: always
@@ -130,8 +131,9 @@ services:
         limits:
           cpus: '2'
           memory: 4G
-    profiles: ["default", "cpu"]
+    # No profile restriction - always enabled
 
+  # NVIDIA GPU-specific Ollama service
   ollama-gpu-nvidia:
     image: ollama/ollama:latest
     restart: always
@@ -151,8 +153,9 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    profiles: ["gpu-nvidia"]
+    profiles: ["gpu-nvidia"] # Only enabled when gpu-nvidia profile is activated
 
+  # AMD GPU-specific Ollama service
   ollama-gpu-amd:
     image: ollama/ollama:rocm
     restart: always
@@ -168,7 +171,7 @@ services:
     devices:
       - "/dev/kfd"
       - "/dev/dri"
-    profiles: ["gpu-amd"]
+    profiles: ["gpu-amd"] # Only enabled when gpu-amd profile is activated
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
