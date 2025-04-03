@@ -402,11 +402,11 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; t
 else
   # Try to get server's public IP for Linux
   SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "localhost")
-  echo "- n8n: http://${SERVER_IP}:5678"
-  echo "- Open WebUI: http://${SERVER_IP}:3000"
-  echo "- Ollama API: http://${SERVER_IP}:11434"
-  echo "- Qdrant API: http://${SERVER_IP}:6333"
-  echo "- ngrok dashboard: http://${SERVER_IP}:4040"
+  echo "- n8n: http://localhost:5678"
+  echo "- Open WebUI: http://localhost:3000"
+  echo "- Ollama API: http://localhost:11434"
+  echo "- Qdrant API: http://localhost:6333"
+  echo "- ngrok dashboard: http://localhost:4040"
 fi
 
 echo ""
