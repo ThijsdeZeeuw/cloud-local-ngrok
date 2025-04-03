@@ -29,6 +29,14 @@ echo "Setting up installation directory..."
 mkdir -p /root/ai-stack
 cd /root/ai-stack
 
+# Create shared directory for n8n
+mkdir -p shared
+echo "Created shared directory for n8n at $(pwd)/shared"
+
+# Create n8n backup directory
+mkdir -p n8n/backup
+echo "Created n8n backup directory at $(pwd)/n8n/backup"
+
 # Create docker-compose.yml
 echo "Creating Docker Compose configuration..."
 cat > docker-compose.yml << 'EOL'
@@ -45,22 +53,31 @@ services:
     networks:
       - backend
     ports:
-      - "5678:5678"
+      - "${N8N_PORT:-5678}:5678"
     environment:
       - N8N_SECURE_COOKIE=false
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://vertically-concise-stud.ngrok-free.app}
+      - N8N_WEBHOOK_HOST=${N8N_WEBHOOK_HOST:-vertically-concise-stud.ngrok-free.app}
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=n8n
-      - DB_POSTGRESDB_USER=n8n
-      - DB_POSTGRESDB_PASSWORD=n8n_password_123
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-n8n_password_123}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-encryption-key-here}
+      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET:-your-jwt-secret-here}
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama:11434}
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./shared:/data/shared
+      - ./n8n/backup:/backup
     depends_on:
       - postgres
+      - ollama
+      - qdrant
 
   postgres:
     image: postgres:15-alpine
@@ -68,12 +85,18 @@ services:
     networks:
       - backend
     environment:
-      - POSTGRES_USER=n8n
-      - POSTGRES_PASSWORD=n8n_password_123
-      - POSTGRES_DB=n8n
+      - POSTGRES_USER=${POSTGRES_USER:-n8n}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-n8n_password_123}
+      - POSTGRES_DB=${POSTGRES_DB:-n8n}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
+  # Main Ollama service - CPU version
   ollama:
     image: ollama/ollama:latest
     restart: always
@@ -86,6 +109,52 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    # No profile restriction - always enabled
+
+  # NVIDIA GPU-specific Ollama service
+  ollama-gpu-nvidia:
+    image: ollama/ollama:latest
+    restart: always
+    networks:
+      - backend
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles: ["gpu-nvidia"] # Only enabled when gpu-nvidia profile is activated
+
+  # AMD GPU-specific Ollama service
+  ollama-gpu-amd:
+    image: ollama/ollama:rocm
+    restart: always
+    networks:
+      - backend
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    devices:
+      - "/dev/kfd"
+      - "/dev/dri"
+    profiles: ["gpu-amd"] # Only enabled when gpu-amd profile is activated
 
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
@@ -93,7 +162,7 @@ services:
     networks:
       - backend
     ports:
-      - "3000:8080"
+      - "${OPENWEBUI_PORT:-3000}:8080"
     environment:
       - OLLAMA_API_BASE_URL=http://ollama:11434
     volumes:
@@ -107,11 +176,17 @@ services:
     networks:
       - backend
     ports:
-      - "6333:6333"
+      - "${QDRANT_PORT:-6333}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     environment:
       - QDRANT_ALLOW_RECOVERY=true
+      - QDRANT_STORAGE_OPTIMIZERS_DEFAULT_SEGMENT_NUMBER=2
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
 
   ngrok:
     image: ngrok/ngrok:latest
@@ -123,6 +198,8 @@ services:
     volumes:
       - ./ngrok.yml:/etc/ngrok.yml
     command: start --all --config /etc/ngrok.yml
+    depends_on:
+      - n8n
 
 volumes:
   n8n_data:
@@ -132,23 +209,25 @@ volumes:
   qdrant_data:
 EOL
 
-# Create simplified ngrok.yml
 echo "Creating ngrok configuration..."
 cat > ngrok.yml << 'EOL'
 version: 2
-authtoken: 2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
+authtoken: 2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
 tunnels:
   n8n:
     proto: http
     addr: n8n:5678
     inspect: true
+  custom-domain-tunnel:
+    proto: http
+    addr: n8n:5678
+    hostname: vertically-concise-stud.ngrok-free.app
   openwebui:
     proto: http
     addr: openwebui:8080
     inspect: true
 EOL
 
-# Create .env file
 echo "Creating .env file..."
 cat > .env << 'EOL'
 # Database Configuration
@@ -166,6 +245,14 @@ N8N_BASIC_AUTH_ACTIVE=true
 N8N_BASIC_AUTH_USER=admin
 N8N_BASIC_AUTH_PASSWORD=admin_password_123
 
+# n8n Security (add your own values in production)
+N8N_ENCRYPTION_KEY=your-encryption-key-here
+N8N_USER_MANAGEMENT_JWT_SECRET=your-jwt-secret-here
+
+# n8n Webhook Configuration (for use with ngrok)
+N8N_WEBHOOK_URL=https://vertically-concise-stud.ngrok-free.app
+N8N_WEBHOOK_HOST=vertically-concise-stud.ngrok-free.app
+
 # Ollama Configuration
 OLLAMA_HOST=ollama:11434
 
@@ -173,7 +260,9 @@ OLLAMA_HOST=ollama:11434
 OPENWEBUI_PORT=3000
 
 # ngrok Configuration
-NGROK_AUTHTOKEN=2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
+NGROK_AUTHTOKEN=2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
+# If you have a static domain (available on free plan) set it here
+NGROK_DOMAIN=vertically-concise-stud.ngrok-free.app
 
 # Qdrant Configuration
 QDRANT_HOST=qdrant
@@ -222,5 +311,12 @@ echo "- Ollama API: http://${SERVER_IP}:11434"
 echo "- Qdrant API: http://${SERVER_IP}:6333"
 echo "- ngrok dashboard: http://${SERVER_IP}:4040"
 echo ""
-echo "Get your ngrok tunnel URLs from the dashboard."
+echo "n8n is also available via ngrok at: https://vertically-concise-stud.ngrok-free.app"
+echo ""
+echo "To use with external services like Telegram, WhatsApp, etc.:"
+echo "1. In your n8n workflows, use the following URL for webhooks:"
+echo "   https://vertically-concise-stud.ngrok-free.app"
+echo "2. For Telegram bots, set the webhook URL to:"
+echo "   https://vertically-concise-stud.ngrok-free.app/webhook-test"
+echo "   (replace 'webhook-test' with your actual webhook path)"
 echo "===========================================" 

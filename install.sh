@@ -78,6 +78,8 @@ services:
       - N8N_HOST=${N8N_HOST:-localhost}
       - N8N_PORT=${N8N_PORT:-5678}
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://vertically-concise-stud.ngrok-free.app}
+      - N8N_WEBHOOK_HOST=${N8N_WEBHOOK_HOST:-vertically-concise-stud.ngrok-free.app}
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
@@ -229,17 +231,16 @@ EOL
 echo "Creating ngrok configuration..."
 cat > ngrok.yml << 'EOL'
 version: 2
-authtoken: ${NGROK_AUTHTOKEN:-2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd}
+authtoken: ${NGROK_AUTHTOKEN:-2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t}
 tunnels:
   n8n:
     proto: http
     addr: n8n:5678
     inspect: true
-  # If you have a custom domain, uncomment and modify this section
-  # custom-domain-tunnel:
-  #   proto: http
-  #   addr: n8n:5678
-  #   hostname: ${NGROK_DOMAIN}
+  custom-domain-tunnel:
+    proto: http
+    addr: n8n:5678
+    hostname: ${NGROK_DOMAIN:-vertically-concise-stud.ngrok-free.app}
   openwebui:
     proto: http
     addr: openwebui:8080
@@ -267,6 +268,10 @@ N8N_BASIC_AUTH_PASSWORD=admin_password_123
 N8N_ENCRYPTION_KEY=your-encryption-key-here
 N8N_USER_MANAGEMENT_JWT_SECRET=your-jwt-secret-here
 
+# n8n Webhook Configuration (for use with ngrok)
+N8N_WEBHOOK_URL=https://vertically-concise-stud.ngrok-free.app
+N8N_WEBHOOK_HOST=vertically-concise-stud.ngrok-free.app
+
 # Ollama Configuration
 OLLAMA_HOST=ollama:11434
 
@@ -274,9 +279,9 @@ OLLAMA_HOST=ollama:11434
 OPENWEBUI_PORT=3000
 
 # ngrok Configuration
-NGROK_AUTHTOKEN=2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
+NGROK_AUTHTOKEN=2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
 # If you have a static domain (available on free plan) set it here
-# NGROK_DOMAIN=your-static-domain.ngrok-free.app
+NGROK_DOMAIN=vertically-concise-stud.ngrok-free.app
 
 # Qdrant Configuration
 QDRANT_HOST=qdrant
@@ -306,8 +311,8 @@ N8N_USER_MANAGEMENT_JWT_SECRET=your-jwt-secret-here
 
 # n8n Webhook Configuration (for use with ngrok)
 # After getting your ngrok domain, update these values
-N8N_WEBHOOK_URL=https://your-ngrok-domain.ngrok-free.app
-N8N_WEBHOOK_HOST=your-ngrok-domain.ngrok-free.app
+N8N_WEBHOOK_URL=https://vertically-concise-stud.ngrok-free.app
+N8N_WEBHOOK_HOST=vertically-concise-stud.ngrok-free.app
 
 # Ollama Configuration
 OLLAMA_HOST=ollama:11434
@@ -319,9 +324,9 @@ OLLAMA_HOST=ollama:11434
 OPENWEBUI_PORT=3000
 
 # ngrok Configuration (get your token from https://dashboard.ngrok.com/)
-NGROK_AUTHTOKEN=your_ngrok_authtoken_here
+NGROK_AUTHTOKEN=2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
 # If you have a static domain (available on free plan) set it here
-# NGROK_DOMAIN=your-static-domain.ngrok-free.app
+NGROK_DOMAIN=vertically-concise-stud.ngrok-free.app
 
 # Qdrant Configuration
 QDRANT_HOST=qdrant
@@ -331,17 +336,16 @@ EOL
 echo "Creating ngrok.yml.example file..."
 cat > ngrok.yml.example << 'EOL'
 version: 2
-authtoken: your-ngrok-authtoken # Get this from https://dashboard.ngrok.com/get-started/your-authtoken
+authtoken: 2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
 tunnels:
   n8n:
     proto: http
     addr: n8n:5678
     inspect: true
-  # If you have a custom domain, uncomment and modify this section
-  # custom-domain-tunnel:
-  #   proto: http
-  #   addr: n8n:5678
-  #   hostname: your-ngrok-domain.ngrok-free.app
+  custom-domain-tunnel:
+    proto: http
+    addr: n8n:5678
+    hostname: vertically-concise-stud.ngrok-free.app
   openwebui:
     proto: http
     addr: openwebui:8080
@@ -408,9 +412,12 @@ fi
 echo ""
 echo "Get your ngrok tunnel URLs from the dashboard: http://localhost:4040"
 echo ""
+echo "n8n is also available via ngrok at: https://vertically-concise-stud.ngrok-free.app"
+echo ""
 echo "To use with external services like Telegram, WhatsApp, etc.:"
-echo "1. Get a free ngrok account at https://ngrok.com/"
-echo "2. Get your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken"
-echo "3. Update your .env and ngrok.yml files with your token"
-echo "4. Restart the services with: docker-compose restart ngrok"
+echo "1. In your n8n workflows, use the following URL for webhooks:"
+echo "   https://vertically-concise-stud.ngrok-free.app"
+echo "2. For Telegram bots, set the webhook URL to:"
+echo "   https://vertically-concise-stud.ngrok-free.app/webhook-test"
+echo "   (replace 'webhook-test' with your actual webhook path)"
 echo "===========================================" 

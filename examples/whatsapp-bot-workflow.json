@@ -1,0 +1,220 @@
+{
+    "name": "WhatsApp AI Assistant with Ollama",
+    "nodes": [{
+            "parameters": {
+                "path": "whatsapp-webhook",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "WhatsApp Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                220,
+                300
+            ],
+            "webhookId": "bd731ff7-cbf2-4f35-8fd2-ddb9f36a7c98"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract WhatsApp message data\nconst body = $input.item.json.body;\n\n// Check if it's a WhatsApp message\nif (body && body.object === 'whatsapp_business_account') {\n  try {\n    const entry = body.entry[0];\n    const changes = entry.changes[0];\n    const value = changes.value;\n    \n    if (value.messages && value.messages.length > 0) {\n      const message = value.messages[0];\n      const from = message.from;\n      const messageText = message.text?.body || \"\";\n      \n      // Return processed data\n      return {\n        json: {\n          phone: from,\n          message: messageText,\n          messageId: message.id,\n          whatsappBusinessId: value.metadata.phone_number_id\n        }\n      };\n    }\n  } catch (error) {\n    console.error('Error processing WhatsApp message:', error);\n  }\n}\n\n// Return empty if not a valid message\nreturn { json: { invalid: true } };"
+            },
+            "name": "Extract Message Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                440,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [{
+                        "value1": "={{ $json.invalid }}",
+                        "operation": "exists"
+                    }]
+                }
+            },
+            "name": "Is Valid Message?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                660,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "content": "=# System Instructions\nYou are a helpful AI assistant responding to users via WhatsApp. Keep your responses concise, friendly, and helpful. If you're asked to do something you can't do, politely explain your limitations.\n\n# User Input\nUser: {{ $json.message }}",
+                "model": "llama2:latest",
+                "options": {
+                    "temperature": 0.7,
+                    "topP": 0.9,
+                    "topK": 40,
+                    "maxTokens": 500
+                }
+            },
+            "name": "Generate AI Response",
+            "type": "n8n-nodes-base.ollama",
+            "typeVersion": 1,
+            "position": [
+                860,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "url": "=https://graph.facebook.com/v17.0/{{ $json.whatsappBusinessId }}/messages",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "method": "POST",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [{
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "recipient_type",
+                            "value": "individual"
+                        },
+                        {
+                            "name": "to",
+                            "value": "={{ $json.phone }}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "text"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ {\"preview_url\":false,\"body\":$node[\"Generate AI Response\"].json.output} }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "redirect": {
+                        "redirect": {
+                            "followRedirects": true
+                        }
+                    }
+                }
+            },
+            "name": "Send WhatsApp Response",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1060,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "name": "Webhook Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1280,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "name": "Respond to Verification",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                860,
+                380
+            ]
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "WhatsApp Webhook": {
+            "main": [
+                [{
+                    "node": "Extract Message Data",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Extract Message Data": {
+            "main": [
+                [{
+                    "node": "Is Valid Message?",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Is Valid Message?": {
+            "main": [
+                [{
+                    "node": "Generate AI Response",
+                    "type": "main",
+                    "index": 0
+                }],
+                [{
+                    "node": "Respond to Verification",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Generate AI Response": {
+            "main": [
+                [{
+                    "node": "Send WhatsApp Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Send WhatsApp Response": {
+            "main": [
+                [{
+                    "node": "Webhook Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Respond to Verification": {
+            "main": [
+                [{
+                    "node": "Webhook Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": false,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": ""
+    },
+    "staticData": null,
+    "tags": [{
+            "name": "whatsapp"
+        },
+        {
+            "name": "ollama"
+        },
+        {
+            "name": "ai"
+        }
+    ],
+    "triggerCount": 1,
+    "versionId": "",
+    "id": "whatsapp-ollama-assistant"
+}

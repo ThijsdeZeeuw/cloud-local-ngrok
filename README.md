@@ -109,6 +109,88 @@ This stack uses ngrok to make your local services accessible from the internet, 
 4. Edit your `.env` file to add your authtoken and domain
 5. Also update your `ngrok.yml` file with the same information
 
+## Using with Telegram
+
+To set up a Telegram bot with this stack:
+
+1. Talk to [@BotFather](https://t.me/BotFather) on Telegram to create a new bot and get a token
+2. In n8n, create a new workflow with a Telegram trigger node
+3. Configure the Telegram node with your bot token
+4. Use the following webhook URL in your Telegram settings:
+   `https://vertically-concise-stud.ngrok-free.app/webhook/{n8n-path}`
+   (Where `{n8n-path}` is the path defined in your n8n Telegram trigger node)
+5. Test your bot by sending it a message
+
+Example Telegram bot workflow setup in n8n:
+1. Add a "Telegram Trigger" node
+2. Configure it with your bot token
+3. Set the Resource to "Message" and Event to "Received"
+4. Connect it to an "Ollama" node to generate AI responses
+5. Add a "Telegram" node to send the response back to the user
+6. Activate the workflow
+
+Advanced Telegram bot features you can add:
+- Image generation with Stable Diffusion
+- Document analysis with Ollama and Qdrant
+- Calendar integration for scheduling appointments
+- Weather information using external APIs
+- News summarization from RSS feeds
+
+### Linux-Specific Telegram Setup
+
+For Linux users, we've created dedicated tools to simplify the Telegram bot setup:
+
+1. **Automatic Setup Script**:
+   ```bash
+   chmod +x setup-telegram-linux.sh
+   ./setup-telegram-linux.sh
+   ```
+   This script handles everything - checking requirements, installing Docker if needed, setting up the webhook, and creating a systemd service for auto-start.
+
+2. **Detailed Linux Guide**:
+   
+   The `linux-telegram-setup.md` file contains comprehensive instructions for Linux-specific setup, including:
+   - Complete step-by-step instructions
+   - Troubleshooting Linux-specific issues
+   - Firewall configuration
+   - Creating a systemd service for automatic startup
+
+These tools ensure that your Telegram bot works perfectly on Linux systems, whether a local installation or a remote VPS.
+
+## Using with WhatsApp
+
+To set up WhatsApp integration with this stack:
+
+1. Create a Meta for Developers account at [developers.facebook.com](https://developers.facebook.com/)
+2. Set up a WhatsApp Business API application in the Meta Developer Portal
+3. Configure a webhook with the ngrok URL:
+   `https://vertically-concise-stud.ngrok-free.app/webhook/{n8n-path}`
+4. In n8n, create a new workflow with a Webhook node to receive WhatsApp messages
+5. Use the WhatsApp node to send responses back to users
+
+Example WhatsApp workflow setup in n8n:
+1. Add a "Webhook" node configured to receive POST requests
+2. Add a JavaScript node to parse the WhatsApp message format
+3. Connect to an "Ollama" node for AI-generated responses
+4. Use HTTP Request nodes to send messages back via the WhatsApp API
+5. Activate the workflow
+
+WhatsApp integration use cases:
+- Customer support automation
+- Appointment scheduling and reminders
+- Product information and recommendations
+- Order status updates
+- Educational content delivery
+
+## Example Workflows
+
+We've included sample workflows in the `examples` directory to help you get started quickly:
+
+- [Telegram Bot Workflow](examples/telegram-bot-workflow.json) - Ready-to-import n8n workflow for a Telegram AI assistant
+- [WhatsApp Bot Workflow](examples/whatsapp-bot-workflow.json) - Ready-to-import n8n workflow for a WhatsApp AI assistant
+
+See the [examples README](examples/README.md) for detailed instructions on how to import and configure these workflows.
+
 ## Configuration
 
 The setup can be customized through the following files:
@@ -138,6 +220,7 @@ If you encounter issues:
 
 - **"Service was pulled in as a dependency but is not enabled by the active profiles"**: This error has been fixed in the latest version. The default Ollama service is now always enabled regardless of profile.
 - **Cannot access Ollama when using GPU**: Make sure you have the proper GPU drivers installed and Docker has access to your GPU.
+- **Telegram bot not receiving messages**: Check that your webhook URL is correct and the n8n workflow is activated.
 
 ## Updating
 

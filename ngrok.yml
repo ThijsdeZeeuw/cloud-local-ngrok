@@ -1,16 +1,15 @@
 version: 2
-authtoken: ${NGROK_AUTHTOKEN:-2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd}
+authtoken: 2vCZz1Ccvx74KuM9sJwPt2vqElE_2VoqKTy1SxHcuyFhW2M3t
 
 tunnels:
   n8n:
     proto: http
     addr: n8n:5678
     inspect: true
-  # If you have a custom domain, uncomment and modify this section
-  # custom-domain-tunnel:
-  #   proto: http
-  #   addr: n8n:5678
-  #   hostname: ${NGROK_DOMAIN}
+  custom-domain-tunnel:
+    proto: http
+    addr: n8n:5678
+    hostname: vertically-concise-stud.ngrok-free.app
   openwebui:
     proto: http
     addr: openwebui:8080

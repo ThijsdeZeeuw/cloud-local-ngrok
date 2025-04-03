@@ -1,0 +1,156 @@
+{
+    "name": "Telegram AI Assistant with Ollama",
+    "nodes": [{
+            "parameters": {
+                "authentication": "updateWebhook",
+                "updateWebhook": true,
+                "options": {}
+            },
+            "name": "Telegram trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                320
+            ],
+            "webhookId": "322dce18-f93e-4f86-b9b1-3305519b7834"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.message.chat.id }}",
+                "text": "Processing your request... ⏳",
+                "additionalFields": {}
+            },
+            "name": "Send Processing Message",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                420,
+                220
+            ]
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [{
+                            "name": "userMessage",
+                            "value": "={{ $json.message.text }}"
+                        },
+                        {
+                            "name": "userName",
+                            "value": "={{ $json.message.from.first_name }}"
+                        },
+                        {
+                            "name": "chatId",
+                            "value": "={{ $json.message.chat.id }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Process Message Data",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                420,
+                420
+            ]
+        },
+        {
+            "parameters": {
+                "content": "=# System Instructions\nYou are a helpful AI assistant that responds to users via Telegram. Keep your responses concise, friendly, and helpful. If you're asked to do something you can't do, politely explain your limitations.\n\n# User Input\n{{ $json.userName }}: {{ $json.userMessage }}",
+                "model": "llama2:latest",
+                "options": {
+                    "temperature": 0.7,
+                    "topP": 0.9,
+                    "topK": 40,
+                    "maxTokens": 500
+                }
+            },
+            "name": "Generate AI Response",
+            "type": "n8n-nodes-base.ollama",
+            "typeVersion": 1,
+            "position": [
+                640,
+                420
+            ]
+        },
+        {
+            "parameters": {
+                "authentication": "genericCredentialType",
+                "operation": "sendMessage",
+                "chatId": "={{ $node[\"Process Message Data\"].json.chatId }}",
+                "text": "={{ $json.output }}",
+                "additionalFields": {
+                    "disable_web_page_preview": true,
+                    "parse_mode": "HTML"
+                }
+            },
+            "name": "Send AI Response",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                860,
+                420
+            ]
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Telegram trigger": {
+            "main": [
+                [{
+                        "node": "Send Processing Message",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Process Message Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Message Data": {
+            "main": [
+                [{
+                    "node": "Generate AI Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        },
+        "Generate AI Response": {
+            "main": [
+                [{
+                    "node": "Send AI Response",
+                    "type": "main",
+                    "index": 0
+                }]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": false,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": ""
+    },
+    "staticData": null,
+    "tags": [{
+            "name": "telegram"
+        },
+        {
+            "name": "ollama"
+        },
+        {
+            "name": "ai"
+        }
+    ],
+    "triggerCount": 1,
+    "versionId": "",
+    "id": "telegram-ollama-assistant-custom"
+}
