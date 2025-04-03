@@ -1,0 +1,19 @@
+# Environment files
+.env
+*.env
+.env.*
+!.env.example
+
+# n8n backup data
+shared/
+n8n/backup/*
+!n8n/backup/.gitkeep
+
+# Other common files to ignore
+.DS_Store
+node_modules/ 
+
+# Key files to ignore
+**/ssl/
+ngrok.yml
+!ngrok.yml.example 

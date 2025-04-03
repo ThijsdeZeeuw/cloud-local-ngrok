@@ -1,6 +1,5 @@
 version: 2
-authtoken: ${NGROK_AUTHTOKEN:-2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd}
-
+authtoken: your-ngrok-authtoken # Get this from https://dashboard.ngrok.com/get-started/your-authtoken
 tunnels:
   n8n:
     proto: http
@@ -10,7 +9,7 @@ tunnels:
   # custom-domain-tunnel:
   #   proto: http
   #   addr: n8n:5678
-  #   hostname: ${NGROK_DOMAIN}
+  #   hostname: your-ngrok-domain.ngrok-free.app
   openwebui:
     proto: http
     addr: openwebui:8080

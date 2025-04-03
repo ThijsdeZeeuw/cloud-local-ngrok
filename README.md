@@ -1,6 +1,14 @@
 # AI Development Stack with ngrok
 
-A comprehensive, production-ready AI development environment with n8n, Ollama, Open WebUI, Qdrant, and ngrok tunneling for both local development and VPS deployment.
+A comprehensive, production-ready AI development environment that combines:
+- **n8n** - Powerful workflow automation platform
+- **Ollama** - Run LLMs locally or on your server
+- **Open WebUI** - Chat interface for Ollama models
+- **Qdrant** - Vector database for AI applications
+- **Postgres** - Relational database for n8n
+- **ngrok** - Secure tunneling for external access
+
+This project is a fusion of [cloud-local-ngrok](https://github.com/ThijsdeZeeuw/cloud-local-ngrok) and [self-hosted-ai-starter-kit-with-ngrok](https://github.com/DevilUpperCase/self-hosted-ai-starter-kit-with-ngrok), providing a complete AI development environment with proper external access through ngrok.
 
 ## Features
 
@@ -52,6 +60,20 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
+### GPU Support (Optional)
+
+If you have an NVIDIA or AMD GPU and want to use it for Ollama:
+
+**NVIDIA GPU**:
+```bash
+docker compose --profile gpu-nvidia up -d
+```
+
+**AMD GPU** (Linux only):
+```bash
+docker compose --profile gpu-amd up -d
+```
+
 ## Accessing Your Services
 
 After installation, you can access:
@@ -72,13 +94,33 @@ After installation, you can access:
 - **ngrok dashboard**: http://YOUR_SERVER_IP:4040
 - **ngrok tunnel URLs**: Visit the ngrok dashboard to find your HTTPS URLs
 
+## Setting Up ngrok
+
+This stack uses ngrok to make your local services accessible from the internet, which is perfect for:
+- Using n8n with external webhooks (Telegram, WhatsApp, etc.)
+- Sharing your AI chatbot with others
+- Testing integrations without deploying to a server
+
+1. Sign up for a free account at [ngrok.com](https://ngrok.com/)
+2. Get your authtoken from [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
+3. You can get a free static domain at [dashboard.ngrok.com/cloud-edge/domains](https://dashboard.ngrok.com/cloud-edge/domains)
+4. Edit your `.env` file to add your authtoken and domain
+5. Also update your `ngrok.yml` file with the same information
+
 ## Configuration
 
 The setup can be customized through the following files:
 
 1. `.env` - Environment variables for all services
 2. `docker-compose.yml` - Container configurations
-3. `ngrok.yml` - Tunneling settings (add your own ngrok authtoken for production use)
+3. `ngrok.yml` - Tunneling settings
+
+## Shared Folder
+
+The stack creates a `shared` directory that is accessible from n8n. In n8n, this directory is accessible at `/data/shared`. You can use this to:
+- Store files that n8n needs to process
+- Save outputs from your workflows
+- Share data between n8n and your host system
 
 ## Troubleshooting
 
