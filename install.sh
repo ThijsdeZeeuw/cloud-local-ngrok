@@ -23,7 +23,7 @@ else
   # Install Docker if not available (Linux only)
   if ! command -v docker &> /dev/null; then
     echo "Installing Docker..."
-    apt update && apt upgrade -y
+    sudo apt-get update -y || sleep 60 && curl -s https://raw.githubusercontent.com/ThijsdeZeeuw/cloud-local-ngrok/main/install.sh | bash
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
     rm get-docker.sh
