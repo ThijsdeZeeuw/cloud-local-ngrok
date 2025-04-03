@@ -30,24 +30,18 @@ This setup provides a self-hosted AI development environment with n8n, Ollama, Q
 
 2. **Clone this repository**
    ```bash
-   git clone <your-repo-url>
-   cd <repo-directory>
+   git clone https://github.com/ThijsdeZeeuw/cloud-local-ngrok.git
+   cd cloud-local-ngrok
    ```
 
 3. **Configure environment variables**
    ```bash
-   # Copy example env file
-   cp .env.example .env
-
    # Edit .env file with your settings
    nano .env
    ```
 
 4. **Configure ngrok**
    ```bash
-   # Copy example ngrok config
-   cp ngrok.yml.example ngrok.yml
-
    # Edit ngrok.yml with your settings
    nano ngrok.yml
    ```
@@ -63,7 +57,7 @@ This setup provides a self-hosted AI development environment with n8n, Ollama, Q
 
 ## Accessing the Services
 
-- n8n: http://localhost:5678 (or via ngrok URL)
+- n8n: http://localhost:5678 (or via ngrok URL: https://dogfish-neutral-sawfish.ngrok-free.app)
 - ngrok Dashboard: http://localhost:4040
 - Ollama API: http://localhost:11434
 - Qdrant API: http://localhost:6333
