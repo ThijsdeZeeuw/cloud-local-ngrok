@@ -8,4 +8,4 @@ tunnels:
     host_header: ${N8N_HOST}
     inspect: true
     # If you have a custom domain, uncomment and modify the following line:
-    # hostname: ${NGROK_DOMAIN} 
+    hostname: ${NGROK_DOMAIN} 
