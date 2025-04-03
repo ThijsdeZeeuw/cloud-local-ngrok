@@ -1,130 +1,90 @@
-# Self-hosted AI Starter Kit with ngrok for VPS
+# AI Development Stack with ngrok
 
-This setup provides a self-hosted AI development environment with n8n, Ollama, Qdrant, and ngrok tunneling for VPS deployment.
+A comprehensive, production-ready AI development environment with n8n, Ollama, Open WebUI, Qdrant, and ngrok tunneling for VPS deployment.
 
-## Prerequisites
+## Features
 
-- VPS with:
-  - Ubuntu 20.04 LTS or newer
-  - 4GB+ RAM (8GB recommended)
-  - 2+ CPU cores
-  - 20GB+ storage
+- **n8n** - Powerful workflow automation platform
+- **Ollama** - Run LLMs locally or on your server
+- **Open WebUI** - Chat interface for Ollama models
+- **Qdrant** - Vector database for AI applications
+- **Postgres** - Relational database for n8n
+- **ngrok** - Secure tunneling for external access
 
-## Installation Steps
+## Quick Installation
 
-1. **Install Docker and Docker Compose**
-   ```bash
-   # Update system
-   sudo apt update && sudo apt upgrade -y
+Run this single command on your VPS:
 
-   # Install Docker
-   curl -fsSL https://get.docker.com -o get-docker.sh
-   sudo sh get-docker.sh
+```bash
+curl -s https://raw.githubusercontent.com/ThijsdeZeeuw/cloud-local-ngrok/main/install.sh | bash
+```
 
-   # Install Docker Compose
-   sudo apt install docker-compose -y
+## Manual Installation
 
-   # Add user to docker group
-   sudo usermod -aG docker $USER
-   ```
-
-2. **Clone this repository**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/ThijsdeZeeuw/cloud-local-ngrok.git
    cd cloud-local-ngrok
    ```
 
-3. **Configure environment variables**
+2. **Run the installation script**
    ```bash
-   # Edit .env file with your settings
-   nano .env
+   chmod +x install.sh
+   ./install.sh
    ```
 
-4. **Configure ngrok**
-   ```bash
-   # Edit ngrok.yml with your settings
-   nano ngrok.yml
-   ```
+## Accessing Your Services
 
-5. **Start the services**
-   ```bash
-   # Start all services
-   docker-compose up -d
+After installation, you can access:
 
-   # Check logs
-   docker-compose logs -f
-   ```
+- **n8n**: http://YOUR_VPS_IP:5678
+- **Open WebUI**: http://YOUR_VPS_IP:3000
+- **Ollama API**: http://YOUR_VPS_IP:11434
+- **Qdrant API**: http://YOUR_VPS_IP:6333
+- **ngrok dashboard**: http://YOUR_VPS_IP:4040
+- **ngrok tunnel URLs**: Visit the ngrok dashboard to find your HTTPS URLs
 
-## Accessing the Services
+## Hardware Requirements
 
-- n8n: http://localhost:5678 (or via ngrok URL: https://dogfish-neutral-sawfish.ngrok-free.app)
-- ngrok Dashboard: http://localhost:4040
-- Ollama API: http://localhost:11434
-- Qdrant API: http://localhost:6333
+- 4+ CPU cores recommended
+- 8GB+ RAM recommended
+- 20GB+ storage space
 
-## CPU-Specific Optimizations
+## Configuration
 
-The setup is configured for CPU-only usage with the following optimizations:
+The setup can be customized through the following files:
 
-- Ollama:
-  - Limited to 2 CPU cores
-  - 4GB memory limit
-  - Optimized for CPU inference
-
-- Qdrant:
-  - Limited to 1 CPU core
-  - 2GB memory limit
-  - Optimized storage settings for CPU
-
-## Security Considerations
-
-1. Change all default passwords in the `.env` file
-2. Use strong passwords for all services
-3. Consider setting up a firewall (UFW)
-4. Keep your system and Docker images updated
-5. Monitor your ngrok usage and limits
-
-## Maintenance
-
-### Updating Services
-```bash
-# Pull latest images
-docker-compose pull
-
-# Restart services
-docker-compose up -d
-```
-
-### Backup
-```bash
-# Backup volumes
-docker run --rm -v $(pwd):/backup -v n8n_data:/data alpine tar czf /backup/n8n_backup.tar.gz /data
-docker run --rm -v $(pwd):/backup -v postgres_data:/data alpine tar czf /backup/postgres_backup.tar.gz /data
-```
-
-### Monitoring
-```bash
-# View logs
-docker-compose logs -f
-
-# Check container status
-docker-compose ps
-
-# Monitor CPU and memory usage
-docker stats
-```
+1. `.env` - Environment variables for all services
+2. `docker-compose.yml` - Container configurations
+3. `ngrok.yml` - Tunneling settings
 
 ## Troubleshooting
 
-1. Check container logs: `docker-compose logs <service-name>`
-2. Verify environment variables: `docker-compose config`
-3. Check ngrok status: `docker-compose logs ngrok`
-4. Monitor system resources: `htop` or `top`
+If you encounter issues:
 
-## Support
+1. Check Docker container status: `docker ps -a`
+2. View container logs: `docker logs <container_name>`
+3. Check system resources: `htop` or `docker stats`
+4. Verify ngrok is running correctly in the dashboard
 
-For issues and support:
-- n8n: https://community.n8n.io/
-- Ollama: https://github.com/ollama/ollama
-- Qdrant: https://github.com/qdrant/qdrant
-- ngrok: https://ngrok.com/docs 
+## Updating
+
+To update all services:
+
+```bash
+chmod +x update-script.sh
+./update-script.sh
+```
+
+## License
+
+MIT
+
+## Credits
+
+- [n8n](https://n8n.io/)
+- [Ollama](https://ollama.ai/)
+- [Open WebUI](https://github.com/open-webui/open-webui)
+- [Qdrant](https://qdrant.tech/)
+- [ngrok](https://ngrok.com/)
+- [Docker](https://www.docker.com/) 

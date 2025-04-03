@@ -1,0 +1,8 @@
+version: 2
+authtoken: 2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
+log: stdout
+log_level: debug
+tunnels:
+  n8n:
+    proto: http
+    addr: n8n:5678 

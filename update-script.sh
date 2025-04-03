@@ -1,7 +1,16 @@
 #!/bin/bash
 set -e
 
-# Clean up previous installation
+echo "===========================================" 
+echo "  AI Development Stack Update Script"
+echo "===========================================" 
+
+# Make sure we're root
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
 echo "Cleaning up previous installation..."
 
 cd /root
@@ -15,77 +24,61 @@ docker system prune -af || true
 docker volume prune -f || true
 docker network prune -f || true
 
-# Remove old installation folder
-echo "Removing old installation files..."
-rm -rf /root/cloud-local-ngrok
-mkdir -p /root/cloud-local-ngrok
-cd /root/cloud-local-ngrok
+# Ensure installation directory exists
+echo "Setting up installation directory..."
+mkdir -p /root/ai-stack
+cd /root/ai-stack
 
 # Create docker-compose.yml
+echo "Creating Docker Compose configuration..."
 cat > docker-compose.yml << 'EOL'
 version: '3'
 
 networks:
-  demo:
+  backend:
     driver: bridge
-
-volumes:
-  n8n_data:
-  postgres_data:
-  ollama_data:
-  qdrant_data:
 
 services:
   n8n:
     image: n8nio/n8n:latest
-    hostname: n8n
     restart: always
     networks:
-      - demo
+      - backend
     ports:
-      - "${N8N_PORT}:5678"
+      - "5678:5678"
     environment:
-      - N8N_HOST=${N8N_HOST}
-      - N8N_PORT=${N8N_PORT}
-      - N8N_PROTOCOL=${N8N_PROTOCOL}
-      - N8N_USER_MANAGEMENT_DISABLED=${N8N_USER_MANAGEMENT_DISABLED}
-      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
-      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_SECURE_COOKIE=false
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      - OLLAMA_HOST=ollama:11434
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8n_password_123
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
       - postgres
-      - ollama
-      - qdrant
 
   postgres:
     image: postgres:15-alpine
-    hostname: postgres
     restart: always
     networks:
-      - demo
+      - backend
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8n_password_123
+      - POSTGRES_DB=n8n
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   ollama:
     image: ollama/ollama:latest
-    hostname: ollama
     restart: always
     networks:
-      - demo
+      - backend
     ports:
       - "11434:11434"
     volumes:
@@ -94,47 +87,69 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    hostname: qdrant
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
     restart: always
     networks:
-      - demo
+      - backend
     ports:
-      - "${QDRANT_PORT}:6333"
+      - "3000:8080"
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434
+    volumes:
+      - openwebui_data:/app/backend/data
+    depends_on:
+      - ollama
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    networks:
+      - backend
+    ports:
+      - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     environment:
       - QDRANT_ALLOW_RECOVERY=true
-      - QDRANT_STORAGE_OPTIMIZERS_DEFAULT_SEGMENT_NUMBER=2
 
   ngrok:
     image: ngrok/ngrok:latest
-    hostname: ngrok
     restart: always
     networks:
-      - demo
+      - backend
     ports:
       - "4040:4040"
     volumes:
       - ./ngrok.yml:/etc/ngrok.yml
     command: start --all --config /etc/ngrok.yml
-    depends_on:
-      - n8n
+
+volumes:
+  n8n_data:
+  postgres_data:
+  ollama_data:
+  openwebui_data:
+  qdrant_data:
 EOL
 
-# Create ngrok.yml
+# Create simplified ngrok.yml
+echo "Creating ngrok configuration..."
 cat > ngrok.yml << 'EOL'
 version: 2
 authtoken: 2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
 tunnels:
-  custom-domain-tunnel:
+  n8n:
     proto: http
     addr: n8n:5678
-    hostname: dogfish-neutral-sawfish.ngrok-free.app
+    inspect: true
+  openwebui:
+    proto: http
+    addr: openwebui:8080
+    inspect: true
 EOL
 
-# Create .env
+# Create .env file
+echo "Creating .env file..."
 cat > .env << 'EOL'
 # Database Configuration
 POSTGRES_USER=n8n
@@ -154,9 +169,11 @@ N8N_BASIC_AUTH_PASSWORD=admin_password_123
 # Ollama Configuration
 OLLAMA_HOST=ollama:11434
 
+# Open WebUI Configuration
+OPENWEBUI_PORT=3000
+
 # ngrok Configuration
 NGROK_AUTHTOKEN=2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
-NGROK_DOMAIN=dogfish-neutral-sawfish.ngrok-free.app
 
 # Qdrant Configuration
 QDRANT_HOST=qdrant
@@ -178,11 +195,12 @@ if ! command -v docker-compose &> /dev/null; then
   apt install docker-compose -y
 fi
 
-# Pull images first to ensure they are available
-echo "Pulling Docker images..."
+# Pull latest images
+echo "Pulling latest Docker images..."
 docker pull n8nio/n8n:latest
 docker pull postgres:15-alpine
 docker pull ollama/ollama:latest
+docker pull ghcr.io/open-webui/open-webui:main
 docker pull qdrant/qdrant:latest
 docker pull ngrok/ngrok:latest
 
@@ -190,10 +208,19 @@ docker pull ngrok/ngrok:latest
 echo "Starting services..."
 docker-compose up -d
 
-echo "Installation complete!"
-echo "You can access the services at:"
-echo "- n8n: http://46.202.155.155:5678"
-echo "- ngrok URL: https://dogfish-neutral-sawfish.ngrok-free.app"
-echo "- ngrok Dashboard: http://46.202.155.155:4040"
-echo "- Ollama API: http://46.202.155.155:11434"
-echo "- Qdrant API: http://46.202.155.155:6333" 
+# Get server's public IP
+SERVER_IP=$(curl -s ifconfig.me)
+
+echo "===========================================" 
+echo "  Update complete!"
+echo "===========================================" 
+echo ""
+echo "Access your services at:"
+echo "- n8n: http://${SERVER_IP}:5678"
+echo "- Open WebUI: http://${SERVER_IP}:3000"
+echo "- Ollama API: http://${SERVER_IP}:11434"
+echo "- Qdrant API: http://${SERVER_IP}:6333"
+echo "- ngrok dashboard: http://${SERVER_IP}:4040"
+echo ""
+echo "Get your ngrok tunnel URLs from the dashboard."
+echo "===========================================" 

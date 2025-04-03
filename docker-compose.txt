@@ -1,22 +1,19 @@
-version: '3'
-
-networks:
-  backend:
-    driver: bridge
+version: '3.8'
 
 services:
   n8n:
     image: n8nio/n8n:latest
     restart: always
-    networks:
-      - backend
     ports:
       - "${N8N_PORT}:5678"
     environment:
-      - N8N_SECURE_COOKIE=false
       - N8N_HOST=${N8N_HOST}
       - N8N_PORT=${N8N_PORT}
       - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_USER_MANAGEMENT_DISABLED=${N8N_USER_MANAGEMENT_DISABLED}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
@@ -33,8 +30,6 @@ services:
   postgres:
     image: postgres:15-alpine
     restart: always
-    networks:
-      - backend
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -45,12 +40,11 @@ services:
   ollama:
     image: ollama/ollama:latest
     restart: always
-    networks:
-      - backend
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    # CPU-specific optimizations
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
@@ -60,29 +54,14 @@ services:
           cpus: '2'
           memory: 4G
 
-  openwebui:
-    image: ghcr.io/open-webui/open-webui:main
-    restart: always
-    networks:
-      - backend
-    ports:
-      - "${OPENWEBUI_PORT}:8080"
-    environment:
-      - OLLAMA_API_BASE_URL=http://ollama:11434
-    volumes:
-      - openwebui_data:/app/backend/data
-    depends_on:
-      - ollama
-
   qdrant:
     image: qdrant/qdrant:latest
     restart: always
-    networks:
-      - backend
     ports:
       - "${QDRANT_PORT}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+    # CPU-specific optimizations
     environment:
       - QDRANT_ALLOW_RECOVERY=true
       - QDRANT_STORAGE_OPTIMIZERS_DEFAULT_SEGMENT_NUMBER=2
@@ -95,13 +74,12 @@ services:
   ngrok:
     image: ngrok/ngrok:latest
     restart: always
-    networks:
-      - backend
     ports:
       - "4040:4040"
     volumes:
       - ./ngrok.yml:/etc/ngrok.yml
-    command: start --all --config /etc/ngrok.yml
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     depends_on:
       - n8n
 
@@ -109,5 +87,4 @@ volumes:
   n8n_data:
   postgres_data:
   ollama_data:
-  openwebui_data:
   qdrant_data: 
