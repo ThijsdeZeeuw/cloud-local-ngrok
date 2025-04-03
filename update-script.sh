@@ -11,6 +11,11 @@ if [ "$(id -u)" != "0" ]; then
    exit 1
 fi
 
+# Update system packages first
+echo "Updating system packages..."
+apt-get update -y || (echo "Package lock detected. Waiting 60 seconds..." && sleep 60 && apt-get update -y)
+apt-get upgrade -y
+
 echo "Cleaning up previous installation..."
 
 cd /root

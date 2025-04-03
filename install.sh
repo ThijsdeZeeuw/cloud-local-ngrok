@@ -20,10 +20,14 @@ else
     exit 1
   fi
 
+  # Update system packages first
+  echo "Updating system packages..."
+  apt-get update -y || (echo "Package lock detected. Waiting 60 seconds..." && sleep 60 && apt-get update -y)
+  apt-get upgrade -y
+  
   # Install Docker if not available (Linux only)
   if ! command -v docker &> /dev/null; then
     echo "Installing Docker..."
-    apt-get update -y || (echo "Package lock detected. Waiting 60 seconds..." && sleep 60 && apt-get update -y)
     apt-get install -y curl
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
