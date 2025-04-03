@@ -1,5 +1,5 @@
 version: 2
-authtoken: ${NGROK_AUTHTOKEN}
+authtoken: ${NGROK_AUTHTOKEN:-2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd}
 
 tunnels:
   n8n:

@@ -1,0 +1,230 @@
+@echo off
+echo =========================================== 
+echo    AI Development Stack Installation
+echo =========================================== 
+
+:: Check if Docker Desktop is installed
+where docker >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo Docker Desktop is not installed or not in PATH.
+    echo Please install Docker Desktop from: https://www.docker.com/products/docker-desktop/
+    echo After installation, please restart this script.
+    pause
+    exit /b 1
+)
+
+:: Check Docker is running
+docker info >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo Docker Desktop is not running. Please start Docker Desktop and try again.
+    pause
+    exit /b 1
+)
+
+:: Create installation directory
+echo Creating installation directory...
+set INSTALL_DIR=%CD%\ai-stack
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+cd "%INSTALL_DIR%"
+
+:: Clean up previous installations
+echo Cleaning up any previous installations...
+docker-compose down >nul 2>&1
+docker system prune -af >nul 2>&1
+docker volume prune -f >nul 2>&1
+docker network prune -f >nul 2>&1
+
+:: Create docker-compose.yml
+echo Creating Docker Compose configuration...
+(
+echo version: '3'
+echo.
+echo networks:
+echo   backend:
+echo     driver: bridge
+echo.
+echo services:
+echo   n8n:
+echo     image: n8nio/n8n:latest
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     ports:
+echo       - "${N8N_PORT:-5678}:5678"
+echo     environment:
+echo       - N8N_SECURE_COOKIE=false
+echo       - N8N_HOST=${N8N_HOST:-localhost}
+echo       - N8N_PORT=${N8N_PORT:-5678}
+echo       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+echo       - DB_TYPE=postgresdb
+echo       - DB_POSTGRESDB_HOST=postgres
+echo       - DB_POSTGRESDB_PORT=${POSTGRES_PORT:-5432}
+echo       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+echo       - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+echo       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-n8n_password_123}
+echo     volumes:
+echo       - n8n_data:/home/node/.n8n
+echo     depends_on:
+echo       - postgres
+echo       - ollama
+echo       - qdrant
+echo.
+echo   postgres:
+echo     image: postgres:15-alpine
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     environment:
+echo       - POSTGRES_USER=${POSTGRES_USER:-n8n}
+echo       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-n8n_password_123}
+echo       - POSTGRES_DB=${POSTGRES_DB:-n8n}
+echo     volumes:
+echo       - postgres_data:/var/lib/postgresql/data
+echo.
+echo   ollama:
+echo     image: ollama/ollama:latest
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     ports:
+echo       - "11434:11434"
+echo     volumes:
+echo       - ollama_data:/root/.ollama
+echo     environment:
+echo       - OLLAMA_HOST=0.0.0.0
+echo       - OLLAMA_ORIGINS=*
+echo     deploy:
+echo       resources:
+echo         limits:
+echo           cpus: '2'
+echo           memory: 4G
+echo.
+echo   openwebui:
+echo     image: ghcr.io/open-webui/open-webui:main
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     ports:
+echo       - "${OPENWEBUI_PORT:-3000}:8080"
+echo     environment:
+echo       - OLLAMA_API_BASE_URL=http://ollama:11434
+echo     volumes:
+echo       - openwebui_data:/app/backend/data
+echo     depends_on:
+echo       - ollama
+echo.
+echo   qdrant:
+echo     image: qdrant/qdrant:latest
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     ports:
+echo       - "${QDRANT_PORT:-6333}:6333"
+echo     volumes:
+echo       - qdrant_data:/qdrant/storage
+echo     environment:
+echo       - QDRANT_ALLOW_RECOVERY=true
+echo       - QDRANT_STORAGE_OPTIMIZERS_DEFAULT_SEGMENT_NUMBER=2
+echo     deploy:
+echo       resources:
+echo         limits:
+echo           cpus: '1'
+echo           memory: 2G
+echo.
+echo   ngrok:
+echo     image: ngrok/ngrok:latest
+echo     restart: always
+echo     networks:
+echo       - backend
+echo     ports:
+echo       - "4040:4040"
+echo     volumes:
+echo       - ./ngrok.yml:/etc/ngrok.yml
+echo     command: start --all --config /etc/ngrok.yml
+echo     depends_on:
+echo       - n8n
+echo.
+echo volumes:
+echo   n8n_data:
+echo   postgres_data:
+echo   ollama_data:
+echo   openwebui_data:
+echo   qdrant_data:
+) > docker-compose.yml
+
+:: Create ngrok configuration
+echo Creating ngrok configuration...
+(
+echo version: 2
+echo authtoken: ${NGROK_AUTHTOKEN:-2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd}
+echo tunnels:
+echo   n8n:
+echo     proto: http
+echo     addr: n8n:5678
+echo     inspect: true
+echo   openwebui:
+echo     proto: http
+echo     addr: openwebui:8080
+echo     inspect: true
+) > ngrok.yml
+
+:: Create .env file
+echo Creating .env file...
+(
+echo # Database Configuration
+echo POSTGRES_USER=n8n
+echo POSTGRES_PASSWORD=n8n_password_123
+echo POSTGRES_DB=n8n
+echo POSTGRES_PORT=5432
+echo.
+echo # n8n Configuration
+echo N8N_HOST=localhost
+echo N8N_PORT=5678
+echo N8N_PROTOCOL=http
+echo N8N_USER_MANAGEMENT_DISABLED=false
+echo N8N_BASIC_AUTH_ACTIVE=true
+echo N8N_BASIC_AUTH_USER=admin
+echo N8N_BASIC_AUTH_PASSWORD=admin_password_123
+echo.
+echo # Ollama Configuration
+echo OLLAMA_HOST=ollama:11434
+echo.
+echo # Open WebUI Configuration
+echo OPENWEBUI_PORT=3000
+echo.
+echo # ngrok Configuration
+echo NGROK_AUTHTOKEN=2rwgXCuTgFVfYLLlp5YwXPVegPH_5kJj3w16iAmEb52aSLnKd
+echo.
+echo # Qdrant Configuration
+echo QDRANT_HOST=qdrant
+echo QDRANT_PORT=6333
+) > .env
+
+:: Pull Docker images
+echo Pulling Docker images...
+docker pull n8nio/n8n:latest
+docker pull postgres:15-alpine
+docker pull ollama/ollama:latest
+docker pull ghcr.io/open-webui/open-webui:main
+docker pull qdrant/qdrant:latest
+docker pull ngrok/ngrok:latest
+
+:: Start services
+echo Starting services...
+docker-compose up -d
+
+echo =========================================== 
+echo   Installation complete!
+echo =========================================== 
+echo.
+echo Access your services at:
+echo - n8n: http://localhost:5678
+echo - Open WebUI: http://localhost:3000
+echo - Ollama API: http://localhost:11434
+echo - Qdrant API: http://localhost:6333
+echo - ngrok dashboard: http://localhost:4040
+echo.
+echo Get your ngrok tunnel URLs from the dashboard.
+echo =========================================== 
+
+pause 
